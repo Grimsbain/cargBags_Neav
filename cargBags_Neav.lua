@@ -18,86 +18,76 @@ do
     dropdown.Buttons = {}
 
     dropdown:SetFrameStrata("FULLSCREEN_DIALOG")
-    dropdown:SetSize(defaultWidth+frameInset,32)
+    dropdown:SetSize(defaultWidth+frameInset, 32)
     dropdown:SetClampedToScreen(true)
 
-    local inset = 1
-    dropdown:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        tile = true, tileSize = 16, edgeSize = 1,
-        insets = { left = inset, right = inset, top = inset, bottom = inset }})
-    local colors = ns.options.colors.background
-    dropdown:SetBackdropColor(unpack(colors))
-    dropdown:SetBackdropBorderColor(0, 0, 0)
+    local bgOffset = 3
+    dropdown.Background = dropdown:CreateTexture("$parentBackground", "BACKGROUND")
+    dropdown.Background:SetColorTexture(0.0, 0.0, 0.0, 0.90)
+    dropdown.Background:SetPoint("TOPLEFT", dropdown, bgOffset, -bgOffset)
+    dropdown.Background:SetPoint("BOTTOMRIGHT", dropdown, -bgOffset, bgOffset)
+
+    if ( IsAddOnLoaded("!Beautycase") ) then
+        dropdown:CreateBeautyBorder(12)
+    end
 
     function dropdown:CreateButton()
-        local button = CreateFrame("Button", nil, self)
+        local button = CreateFrame("Button", "$parentDropdown", self)
         button:SetWidth(defaultWidth)
         button:SetHeight(frameHeight)
 
-        local fstr = button:CreateFontString()
-        fstr:SetJustifyH("LEFT")
-        fstr:SetJustifyV("MIDDLE")
-        fstr:SetFont(unpack(ns.options.fonts.dropdown))
-        fstr:SetPoint("LEFT", button, "LEFT", 0, 0)
-        button.Text = fstr
+        local fontString = button:CreateFontString("$parentText")
+        fontString:SetJustifyH("LEFT")
+        fontString:SetJustifyV("MIDDLE")
+        fontString:SetFont(unpack(ns.options.fonts.dropdown))
+        fontString:SetPoint("LEFT", button, "LEFT", 0, 0)
+        button.Text = fontString
 
-        function button:SetText(str)
-            button.Text:SetText(str)
+        function button:SetText(text)
+            button.Text:SetText(text)
         end
 
-        button:SetText("test")
-
-        local ntex = button:CreateTexture()
-        ntex:SetColorTexture(1,1,1,0)
-        ntex:SetAllPoints()
-        button:SetNormalTexture(ntex)
-
-        local htex = button:CreateTexture()
-        htex:SetColorTexture(1,1,1,0.2)
-        htex:SetAllPoints()
-        button:SetHighlightTexture(htex)
-
-        local ptex = button:CreateTexture()
-        ptex:SetColorTexture(1,1,1,0.4)
-        ptex:SetAllPoints()
-        button:SetPushedTexture(ptex)
+        button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
 
         return button
     end
 
     function dropdown:AddButton(text, value, func)
-        local bID = self.ActiveButtons+1
+        local id = self.ActiveButtons+1
+        local button = self.Buttons[id] or self:CreateButton()
 
-        local btn = self.Buttons[bID] or self:CreateButton()
+        button:SetText(text or "")
+        button.value = value
+        button.func = func or function() end
 
-        btn:SetText(text or "")
-        btn.value = value
-        btn.func = func or function() end
+        button:SetScript("OnClick", function(self, ...)
+            self:func(...)
+            self:GetParent():Hide()
+        end)
 
-        btn:SetScript("OnClick", function(self, ...) self:func(...) self:GetParent():Hide() end)
-
-        btn:ClearAllPoints()
-        if bID == 1 then
-            btn:SetPoint("TOP", self, "TOP", 0, -(frameInset/2))
+        button:ClearAllPoints()
+        if ( id == 1 ) then
+            button:SetPoint("TOP", self, "TOP", 0, -(frameInset/2))
         else
-            btn:SetPoint("TOP", self.Buttons[bID-1], "BOTTOM", 0, 0)
+            button:SetPoint("TOP", self.Buttons[id-1], "BOTTOM", 0, 0)
         end
 
-        self.Buttons[bID] = btn
-        self.ActiveButtons = bID
+        self.Buttons[id] = button
+        self.ActiveButtons = id
         self:UpdateSize()
     end
 
     function dropdown:UpdatePosition(frame, point, relativepoint, ofsX, ofsY)
-        point, relativepoint, ofsX, ofsY = point or "TOPLEFT", relativepoint or "BOTTOMLEFT", ofsX or 0, ofsY or 0
+        point = point or "TOPLEFT"
+        relativepoint = relativepoint or "BOTTOMLEFT"
+        ofsX = ofsX or 0
+        ofsY = ofsY or 0
 
         self:ClearAllPoints()
         self:SetPoint(point, frame, relativepoint, ofsX, ofsY)
     end
 
     function dropdown:UpdateSize()
-
         local maxButtons = self.ActiveButtons
         local maxwidth = defaultWidth
 
@@ -217,28 +207,32 @@ function cargBags_Neav:ADDON_LOADED(event, name)
     -----------------
     -- Frame Spawns
     -----------------
-    local C = cbNeav:GetContainerClass()
+    local Bag = cbNeav:GetContainerClass()
 
     -- Bank Bags
-    cB_Bags.bankSets        = C:New("cBneav_BankSets")
+    cB_Bags.bankSets        = Bag:New("cBneav_BankSets")
 
-    if cBneav.BankCustomBags then
-        for _,v in ipairs(cB_CustomBags) do
-            cB_Bags["Bank"..v.name] = C:New("Bank"..v.name)
-            cB_existsBankBag[v.name] = true
+    -- Setup custom bank bags.
+    if ( cBneav.BankCustomBags ) then
+        for i = 1, #cB_CustomBags do
+            local bag = cB_CustomBags[i]
+            cB_Bags["Bank"..bag.name] = Bag:New("Bank"..bag.name)
+            cB_existsBankBag[bag.name] = true
         end
     end
 
-    cB_Bags.bankArmor           = C:New("cBneav_BankArmor")
-    cB_Bags.bankGem             = C:New("cBneav_BankGem")
-    cB_Bags.bankConsumables     = C:New("cBneav_BankCons")
-    cB_Bags.bankBattlePet       = C:New("cBneav_BankPet")
-    cB_Bags.bankQuest           = C:New("cBneav_BankQuest")
-    cB_Bags.bankTrade           = C:New("cBneav_BankTrade")
-    cB_Bags.bankFishing         = C:New("cBneav_BankFishing")
-    cB_Bags.bankReagent         = C:New("cBneav_BankReagent")
-    cB_Bags.bank                = C:New("cBneav_Bank")
+    -- Setup static bank bags.
+    cB_Bags.bankArmor           = Bag:New("cBneav_BankArmor")
+    cB_Bags.bankGem             = Bag:New("cBneav_BankGem")
+    cB_Bags.bankConsumables     = Bag:New("cBneav_BankCons")
+    cB_Bags.bankBattlePet       = Bag:New("cBneav_BankPet")
+    cB_Bags.bankQuest           = Bag:New("cBneav_BankQuest")
+    cB_Bags.bankTrade           = Bag:New("cBneav_BankTrade")
+    cB_Bags.bankFishing         = Bag:New("cBneav_BankFishing")
+    cB_Bags.bankReagent         = Bag:New("cBneav_BankReagent")
+    cB_Bags.bank                = Bag:New("cBneav_Bank")
 
+    -- Setup filters.
     cB_Bags.bankSets            :SetMultipleFilters(true, cB_Filters.fBank, cB_Filters.fBankFilter, cB_Filters.fItemSets)
     cB_Bags.bankArmor           :SetExtendedFilter(cB_Filters.fItemClass, "BankArmor")
     cB_Bags.bankGem             :SetExtendedFilter(cB_Filters.fItemClass, "BankGem")
@@ -250,6 +244,7 @@ function cargBags_Neav:ADDON_LOADED(event, name)
     cB_Bags.bankReagent         :SetMultipleFilters(true, cB_Filters.fBankReagent, cB_Filters.fHideEmpty)
     cB_Bags.bank                :SetMultipleFilters(true, cB_Filters.fBank, cB_Filters.fHideEmpty)
 
+    -- Setup custom bag filters.
     if ( cBneav.BankCustomBags ) then
         for i=1, #cB_CustomBags do
             local bag = cB_CustomBags[i]
@@ -258,41 +253,46 @@ function cargBags_Neav:ADDON_LOADED(event, name)
     end
 
     -- Inventory Bags
-    cB_Bags.bagItemSets = C:New("cBneav_ItemSets")
-    cB_Bags.bagStuff    = C:New("cBneav_Stuff")
+    cB_Bags.bagItemSets = Bag:New("cBneav_ItemSets")
+    cB_Bags.bagStuff    = Bag:New("cBneav_Stuff")
 
+    -- Setup low priority custom bags.
     for i=1, #cB_CustomBags do
         local bag = cB_CustomBags[i]
 
         if ( bag.prio > 0 ) then
-            cB_Bags[bag.name] = C:New(bag.name, { isCustomBag = true } )
+            cB_Bags[bag.name] = Bag:New(bag.name, { isCustomBag = true } )
             bag.active = true
             cB_filterEnabled[bag.name] = true
         end
     end
 
-    cB_Bags.bagJunk     = C:New("cBneav_Junk")
-    cB_Bags.bagNew      = C:New("cBneav_NewItems")
+    -- Setup junk and new item bags.
+    cB_Bags.bagJunk     = Bag:New("cBneav_Junk")
+    cB_Bags.bagNew      = Bag:New("cBneav_NewItems")
 
+    -- Setup high priority custom bags.
     for i=1, #cB_CustomBags do
         local bag = cB_CustomBags[i]
 
         if ( bag.prio <= 0 ) then
-            cB_Bags[bag.name] = C:New(bag.name, { isCustomBag = true } )
+            cB_Bags[bag.name] = Bag:New(bag.name, { isCustomBag = true } )
             bag.active = true
             cB_filterEnabled[bag.name] = true
         end
     end
 
-    cB_Bags.bagFishing      = C:New("cBneav_Fishing")
-    cB_Bags.armor           = C:New("cBneav_Armor")
-    cB_Bags.gem             = C:New("cBneav_Gem")
-    cB_Bags.quest           = C:New("cBneav_Quest")
-    cB_Bags.consumables     = C:New("cBneav_Consumables")
-    cB_Bags.battlepet       = C:New("cBneav_BattlePet")
-    cB_Bags.tradegoods      = C:New("cBneav_TradeGoods")
-    cB_Bags.main            = C:New("cBneav_Bag")
+    -- Setup static bags.
+    cB_Bags.bagFishing      = Bag:New("cBneav_Fishing")
+    cB_Bags.armor           = Bag:New("cBneav_Armor")
+    cB_Bags.gem             = Bag:New("cBneav_Gem")
+    cB_Bags.quest           = Bag:New("cBneav_Quest")
+    cB_Bags.consumables     = Bag:New("cBneav_Consumables")
+    cB_Bags.battlepet       = Bag:New("cBneav_BattlePet")
+    cB_Bags.tradegoods      = Bag:New("cBneav_TradeGoods")
+    cB_Bags.main            = Bag:New("cBneav_Bag")
 
+    -- Setup filters.
     cB_Bags.bagItemSets     :SetFilter(cB_Filters.fItemSets, true)
     cB_Bags.bagStuff        :SetExtendedFilter(cB_Filters.fItemClass, "Stuff")
     cB_Bags.bagJunk         :SetExtendedFilter(cB_Filters.fItemClass, "Junk")
@@ -306,11 +306,13 @@ function cargBags_Neav:ADDON_LOADED(event, name)
     cB_Bags.tradegoods      :SetExtendedFilter(cB_Filters.fItemClass, "TradeGoods")
     cB_Bags.main            :SetMultipleFilters(true, cB_Filters.fBags, cB_Filters.fHideEmpty)
 
+    -- Setup custom bag filters.
     for i=1, #cB_CustomBags do
         local bag = cB_CustomBags[i]
         cB_Bags[bag.name]:SetExtendedFilter(cB_Filters.fItemClass, bag.name)
     end
 
+    -- Setup inventory and bank locations.
     cB_Bags.main:SetPoint("BOTTOMRIGHT", -53, 107)
     cB_Bags.bank:SetPoint("TOPLEFT", 20, -20)
     cB_Bags.main:RegisterForDrag("LeftButton")
@@ -324,17 +326,17 @@ end
 function cbNeav:CreateAnchors()
     -----------------------------------------------
     -- Store the anchoring order:
-    -- read: "tar" is anchored to "src" in the direction denoted by "dir".
+    -- read: "self" is anchored to "parent" in the direction denoted by "direction".
     -----------------------------------------------
-    local function CreateAnchorInfo(src, tar, dir)
-        tar.AnchorTo = src
-        tar.AnchorDir = dir
+    local function CreateAnchorInfo(self, parent, direction)
+        self.AnchorTo = parent
+        self.AnchorDir = direction
 
-        if ( src ) then
-            if ( not src.AnchorTargets ) then
-                src.AnchorTargets = {}
+        if ( parent ) then
+            if ( not parent.AnchorTargets ) then
+                parent.AnchorTargets = {}
             end
-            src.AnchorTargets[tar] = true
+            parent.AnchorTargets[self] = true
         end
     end
 
@@ -349,21 +351,22 @@ function cbNeav:CreateAnchors()
     end
 
     -- Main Anchors
-    CreateAnchorInfo(nil, cB_Bags.main, "Bottom")
-    CreateAnchorInfo(nil, cB_Bags.bank, "Bottom")
+    CreateAnchorInfo(cB_Bags.main, nil, "Bottom")
+    CreateAnchorInfo(cB_Bags.bank, nil, "Bottom")
 
     -- Bank Anchors
-    CreateAnchorInfo(cB_Bags.bank, cB_Bags.bankReagent, "Right")
-    CreateAnchorInfo(cB_Bags.bankReagent, cB_Bags.bankTrade, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankReagent, cB_Bags.bank, "Right")
+    CreateAnchorInfo(cB_Bags.bankTrade, cB_Bags.bankReagent, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankGem, cB_Bags.bankTrade, "Bottom")
 
-    CreateAnchorInfo(cB_Bags.bank, cB_Bags.bankArmor, "Bottom")
-    CreateAnchorInfo(cB_Bags.bankArmor, cB_Bags.bankSets, "Bottom")
-    CreateAnchorInfo(cB_Bags.bankSets, cB_Bags.bankConsumables, "Bottom")
-    CreateAnchorInfo(cB_Bags.bankConsumables, cB_Bags.bankFishing, "Bottom")
-    CreateAnchorInfo(cB_Bags.bankFishing, cB_Bags.bankQuest, "Bottom")
-    CreateAnchorInfo(cB_Bags.bankQuest, cB_Bags.bankBattlePet, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankArmor, cB_Bags.bank, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankSets, cB_Bags.bankArmor, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankConsumables, cB_Bags.bankSets, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankFishing, cB_Bags.bankConsumables, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankQuest, cB_Bags.bankFishing, "Bottom")
+    CreateAnchorInfo(cB_Bags.bankBattlePet, cB_Bags.bankQuest, "Bottom")
 
-    -- Setup Bank Custom Bag Anchors
+    -- Setup bank custom bag Anchors
     if ( cBneav.BankCustomBags ) then
         local ref = { [0] = 0, [1] = 0 }
 
@@ -374,29 +377,29 @@ function cbNeav:CreateAnchors()
                 local column = 1
 
                 if ( ref[column] == 0 ) then
-                    ref[column] = (column == 0) and cB_Bags.bankBattlePet or cB_Bags.bankTrade
+                    ref[column] = (column == 0) and cB_Bags.bankBattlePet or cB_Bags.bankGem
                 end
-                CreateAnchorInfo(ref[column], cB_Bags["Bank"..bag.name], "Bottom")
+                CreateAnchorInfo(cB_Bags["Bank"..bag.name], ref[column], "Bottom")
                 ref[column] = cB_Bags["Bank"..bag.name]
             end
         end
     end
 
-    -- Bag Anchors
-    CreateAnchorInfo(cB_Bags.main,          cB_Bags.bagItemSets,    "Left")
-    CreateAnchorInfo(cB_Bags.bagItemSets,   cB_Bags.armor,          "Top")
-    CreateAnchorInfo(cB_Bags.armor,         cB_Bags.gem,            "Top")
-    CreateAnchorInfo(cB_Bags.gem,           cB_Bags.battlepet,      "Top")
-    CreateAnchorInfo(cB_Bags.battlepet,     cB_Bags.bagFishing,     "Top")
-    CreateAnchorInfo(cB_Bags.bagFishing,    cB_Bags.bagStuff,       "Top")
+    -- Setup inventory anchors.
+    CreateAnchorInfo(cB_Bags.bagItemSets, cB_Bags.main, "Left")
+    CreateAnchorInfo(cB_Bags.armor, cB_Bags.bagItemSets, "Top")
+    CreateAnchorInfo(cB_Bags.gem, cB_Bags.armor, "Top")
+    CreateAnchorInfo(cB_Bags.battlepet, cB_Bags.gem, "Top")
+    CreateAnchorInfo(cB_Bags.bagFishing, cB_Bags.battlepet, "Top")
+    CreateAnchorInfo(cB_Bags.bagStuff, cB_Bags.bagFishing, "Top")
 
-    CreateAnchorInfo(cB_Bags.main,          cB_Bags.tradegoods,     "Top")
-    CreateAnchorInfo(cB_Bags.tradegoods,    cB_Bags.consumables,    "Top")
-    CreateAnchorInfo(cB_Bags.consumables,   cB_Bags.quest,          "Top")
-    CreateAnchorInfo(cB_Bags.quest,         cB_Bags.bagJunk,        "Top")
-    CreateAnchorInfo(cB_Bags.bagJunk,       cB_Bags.bagNew,         "Top")
+    CreateAnchorInfo(cB_Bags.tradegoods, cB_Bags.main, "Top")
+    CreateAnchorInfo(cB_Bags.consumables, cB_Bags.tradegoods, "Top")
+    CreateAnchorInfo(cB_Bags.quest, cB_Bags.consumables, "Top")
+    CreateAnchorInfo(cB_Bags.bagJunk, cB_Bags.quest, "Top")
+    CreateAnchorInfo(cB_Bags.bagNew, cB_Bags.bagJunk, "Top")
 
-    -- Setup Custom Bag Anchors
+    -- Setup custom bag anchors
     local ref = { [0] = 0, [1] = 0 }
     for i=1, #cB_CustomBags do
         local bag = cB_CustomBags[i]
@@ -405,7 +408,7 @@ function cbNeav:CreateAnchors()
             if ( ref[column] == 0 ) then
                 ref[column] = (column == 0) and cB_Bags.bagStuff or cB_Bags.bagNew
             end
-            CreateAnchorInfo(ref[column], cB_Bags[bag.name], "Top")
+            CreateAnchorInfo(cB_Bags[bag.name], ref[column], "Top")
             ref[column] = cB_Bags[bag.name]
         end
     end
@@ -527,21 +530,21 @@ function cbNeav:CatDropDownInit()
     DropDownInitialized = true
     local info = {}
 
-    local function AddInfoItem(type)
-        local caption = "cBneav_"..type
-        local title = L.bagCaptions[caption] or L[type]
-        info.text = title and title or type
-        info.value = type
+    local function AddInfoItem(text)
+        local caption = "cBneav_"..text
+        local title = L.bagCaptions[caption] or L[text]
+        info.text = title and title or text
+        info.value = text
 
-        if ( type == "-------------" or type == CANCEL ) then
+        if ( text == "-------------" or text == CANCEL ) then
             info.func = nil
         else
             info.func = function(self)
-                cbNeav:CatDropDownOnClick(self, type)
+                cbNeav:CatDropDownOnClick(self, text)
             end
         end
 
-        cbNeavCatDropDown:AddButton(info.text, type, info.func)
+        cbNeavCatDropDown:AddButton(info.text, text, info.func)
     end
 
     AddInfoItem("MarkAsNew")
@@ -811,12 +814,12 @@ eventWatcher:SetScript("OnEvent", function(self, event, ...)
         NeavcBneav_Bank.reagentBtn:Show()
     else
         NeavcBneav_Bank.reagentBtn:Hide()
-        buyReagent:RegisterEvent("REAGENTBANK_PURCHASED")
 
         local buyReagent = CreateFrame("Button", "$parentBuyReagentTab", NeavcBneav_BankReagent, "UIPanelButtonTemplate")
         buyReagent:SetText(BANKSLOTPURCHASE)
         buyReagent:SetWidth(buyReagent:GetTextWidth() + 20)
         buyReagent:SetPoint("CENTER", NeavcBneav_BankReagent, 0, 0)
+        buyReagent:RegisterEvent("REAGENTBANK_PURCHASED")
 
         buyReagent:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -832,7 +835,7 @@ eventWatcher:SetScript("OnEvent", function(self, event, ...)
             StaticPopup_Show("CONFIRM_BUY_REAGENTBANK_TAB")
         end)
 
-        buyReagent:SetScript("OnEvent", function(...)
+        buyReagent:SetScript("OnEvent", function(event, ...)
             buyReagent:UnregisterEvent("REAGENTBANK_PURCHASED")
             NeavcBneav_Bank.reagentBtn:Show()
             buyReagent:Hide()

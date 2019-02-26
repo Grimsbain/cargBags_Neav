@@ -67,9 +67,7 @@ cB_Filters.fHideEmpty = function(item)
     end
 end
 
-------------------------------------
 -- General Classification (cached)
-------------------------------------
 cB_Filters.fItemClass = function(item, container)
     if ( not item.id ) then
         return false
@@ -80,13 +78,25 @@ cB_Filters.fItemClass = function(item, container)
     end
 
     local class = cB_ItemClass[item.id]
-
     local isBankBag = item.bagID == -1 or (item.bagID >= 5 and item.bagID <= 11)
 
     if ( isBankBag ) then
-        bag = (cB_existsBankBag[class] and cBneavCfg.FilterBank and cB_filterEnabled[class]) and "Bank"..class or "Bank"
+        local bagExists = cB_existsBankBag[class]
+        local isFiltered = cB_filterEnabled[class]
+
+        if ( cBneavCfg.FilterBank and bagExists and isFiltered ) then
+            bag = "Bank"..class
+        else
+            bag = "Bank"
+        end
     else
-        bag = (class ~= "NoClass" and cB_filterEnabled[class]) and class or "Bag"
+        local isFiltered = cB_filterEnabled[class]
+
+        if ( class and class ~= "NoClass" and isFiltered ) then
+            bag = class
+    else
+            bag = "Bag"
+        end
     end
 
     return bag == container
@@ -102,48 +112,58 @@ local function CanGoInBag(itemID, bagType)
     return bit.band(itemFamily, bagType) > 0
 end
 
+local classTable = {
+    [2] = "Armor",
+    [3] = "Gem",
+    [4] = "Armor",
+    [5] = "Quest",
+    [7] = "TradeGoods",
+    [8] = "TradeGoods",
+    [9] = "TradeGoods",
+    [12] = "Quest",
+    [17] = "BattlePet",
+}
+
 function cbNeav:ClassifyItem(item)
-    -- User assigned containers.
     local customBag = cBneav_CatInfo[item.id]
     if ( customBag ) then
         cB_ItemClass[item.id] = customBag
         return true
     end
 
-    -- Junk
     if ( item.quality == 0 ) then
         cB_ItemClass[item.id] = "Junk"
         return true
     end
 
-    -- Type based filters.
-    if ( item.type ) then
-        if      (item.type == L.Armor or item.type == L.Weapon)     then cB_ItemClass[item.id] = "Armor"; return true               -- Weapons and Armor
-        elseif  (item.type == L.Gem and item.subclassID == 11)      then cB_ItemClass[item.id] = "Armor"; return true               -- Artifact Relics
-        elseif  (item.type == L.Quest)                              then cB_ItemClass[item.id] = "Quest"; return true               -- Quest Items
-        elseif  (item.type == L.Trades)                             then cB_ItemClass[item.id] = "TradeGoods"; return true          -- Trade Goods
-        elseif  (item.type == L.Gem)                                then cB_ItemClass[item.id] = "TradeGoods"; return true          -- Gems
-        elseif  (item.type == L.ItemEnhancement)                    then cB_ItemClass[item.id] = "TradeGoods"; return true          -- Item Enhancement
-        elseif  (item.type == L.Recipe)                             then cB_ItemClass[item.id] = "TradeGoods"; return true          -- Recipes
-        elseif  (CanGoInBag(item.id, 0x8000))                       then cB_ItemClass[item.id] = "Fishing"; return true             -- Fishing
-        elseif  (item.type == L.Consumables)                        then cB_ItemClass[item.id] = "Consumables"; return true         -- Consumables
-        elseif  (item.type == L.BattlePet)                          then cB_ItemClass[item.id] = "BattlePet"; return true           -- Battle Pet
-        elseif  (item.classID == 15 and item.subclassID == 2)       then cB_ItemClass[item.id] = "BattlePet"; return true           -- Companion Pets
-        end
+    if ( item.classID ) then
+        local itemType = classTable[item.classID]
+
+        if ( itemType ) then
+            cB_ItemClass[item.id] = itemType
+            return true
+        elseif ( CanGoInBag(item.id, 0x8000) ) then
+            cB_ItemClass[item.id] = "Fishing"
+            return true
+        elseif ( item.classID == 0 ) then
+            cB_ItemClass[item.id] = "Consumables"
+            return true
+        elseif ( item.classID == 15 and item.subclassID == 2 ) then
+            cB_ItemClass[item.id] = "BattlePet"
+        return true
+    end
     end
 
     cB_ItemClass[item.id] = "NoClass"
 end
 
-------------------------------------------
 -- New Items filter
-------------------------------------------
 cB_Filters.fNewItems = function(item)
     if ( not cBneavCfg.NewItems ) then
         return false
     end
 
-    if ( not ((item.bagID >= 0) and (item.bagID <= 4)) ) then
+    if ( item.bagID < 0 or item.bagID > 4 ) then
         return false
     end
 
@@ -153,15 +173,14 @@ cB_Filters.fNewItems = function(item)
 
     if ( not cB_KnownItems[item.id] ) then
         return true
+    else
+        return false
     end
 
-    return GetItemCount(item.id) > cB_KnownItems[item.id]
+    -- return GetItemCount(item.id) > cB_KnownItems[item.id]
 end
 
------------------------------------------
 -- Item Set filter
------------------------------------------
-
 cB_Filters.fItemSets = function(item)
     if ( not cB_filterEnabled["ItemSets"] ) then
         return false

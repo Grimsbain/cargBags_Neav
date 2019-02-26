@@ -210,7 +210,8 @@ end
 
 -- Updating the icons
 local function UpdateButtons(self, event)
-    for i, button in pairs(self.buttons) do
+    for i = 1, #self.buttons do
+        local button = self.buttons[i]
         button:Update()
     end
 end
@@ -222,7 +223,7 @@ local function UpdateButtonLock(self, event, bagID, slotID)
 
     if ( slotID ) then return end
 
-    for i, button in pairs(self.buttons) do
+    for i, button in ipairs(self.buttons) do
         if ( button.invID == bagID ) then
             return button:Update()
         end

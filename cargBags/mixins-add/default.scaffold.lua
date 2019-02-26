@@ -92,7 +92,6 @@ local function ItemButton_Scaffold(self)
     self.Cooldown = _G[name.."Cooldown"]
     self.Quest = _G[name.."IconQuestTexture"]
     self.Border = _G[name.."NormalTexture"]
-    self.BorderSet = false
     self.upgradeArrow = _G[name].UpgradeIcon
     self.flashAnim = _G[name].flashAnim
     self.newItemAnim = _G[name].newitemglowAnim
@@ -102,217 +101,291 @@ local function ItemButton_Scaffold(self)
     self.Cooldown:SetPoint("BOTTOMLEFT", self.Icon, 3, 3)
     self.Cooldown:SetHideCountdownNumbers(false)
 
+    self.Border:ClearAllPoints()
+    self.Border:SetPoint("TOPRIGHT", self.Icon, "TOPRIGHT", 1, 1)
+    self.Border:SetPoint("BOTTOMLEFT", self.Icon, "BOTTOMLEFT", -1, -1)
+    self.Border:SetTexture(mediaPath.."textureNormalWhite")
+
+    if ( self.Quest ) then
+        self.Quest:SetTexture(mediaPath.."QuestBang")
+    end
+
+    if ( self.upgradeArrow ) then
+        self.upgradeArrow:ClearAllPoints()
+        self.upgradeArrow:SetSize(15, 15)
+        self.upgradeArrow:SetPoint("BOTTOMLEFT", self.Icon, -1, 0)
+    end
+
+    if ( self.NewItemTexture ) then
+        self.NewItemTexture:ClearAllPoints()
+        self.NewItemTexture:SetAllPoints(self.Icon)
+    end
+
     self.TopString = CreateInfoString(self, "TOP")
     self.BottomString = CreateInfoString(self, "BOTTOM")
 end
 
 --[[!
     Update the button with new item-information
-    @param item <table> The itemTable holding information, see Implementation:GetItemInfo()
+    @param item <table>, see Implementation:GetItemInfo()
     @callback OnUpdate(item)
 ]]
 
 local function ItemButton_Update(self, item)
-
-        -- Border
-
-    if ( not self.BorderSet ) then
-        self.Border:SetTexture(mediaPath.."textureNormalWhite")
-        self.Border:SetPoint("TOPRIGHT", self.Icon, "TOPRIGHT", 1, 1)
-        self.Border:SetPoint("BOTTOMLEFT", self.Icon, "BOTTOMLEFT", -1, -1)
-        self.BorderSet = true
-    end
-
-        -- New Item Glow
-
-    if ( self.NewItemTexture ) then
-        self.NewItemTexture:ClearAllPoints()
-        self.NewItemTexture:SetAllPoints(self.Icon)
-
-        local isNewItem = C_NewItems.IsNewItem(item.bagID, item.slotID)
-
-        if ( isNewItem ) then
-            local isBattlePayItem = IsBattlePayItem(item.bagID, item.slotID)
-
-            if ( isBattlePayItem ) then
-                self.NewItemTexture:Hide()
-            else
-                if ( item.quality and NEW_ITEM_ATLAS_BY_QUALITY[item.quality] ) then
-                    self.NewItemTexture:SetAtlas(NEW_ITEM_ATLAS_BY_QUALITY[item.quality])
-                else
-                    self.NewItemTexture:SetAtlas("bags-glow-white")
-                end
-                self.NewItemTexture:Show()
-            end
-            if ( not self.flashAnim:IsPlaying() and not self.newItemAnim:IsPlaying() ) then
-                self.flashAnim:Play()
-                self.newItemAnim:Play()
-            end
-        else
-            self.NewItemTexture:Hide()
-            if ( self.flashAnim:IsPlaying() or self.newItemAnim:IsPlaying() ) then
-                self.flashAnim:Stop()
-                self.newItemAnim:Stop()
-            end
-        end
-    end
-
-        -- Set Icon
-
-    if ( item.texture ) then
-        local tex = item.texture or (cBneavCfg.CompressEmpty and self.bgTex)
-
-        if ( tex ) then
-            self.Icon:SetTexture(tex)
-            self.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        else
-            self.Icon:SetColorTexture(1, 1, 1, 0.1)
-            self.Icon:SetTexCoord(0, 1, 0, 1)
-        end
-    else
-        if ( cBneavCfg.CompressEmpty ) then
-            self.Icon:SetTexture(self.bgTex)
-            self.Icon:SetTexCoord(0, 1, 0, 1)
-        else
-            self.Icon:SetColorTexture(1, 1, 1, 0.1)
-            self.Icon:SetTexCoord(0, 1, 0, 1)
-        end
-    end
-
-        -- Stack Count
-
-    if ( item.count and item.count > 1 ) then
-        self.Count:SetText(item.count >= 1e3 and "*" or item.count)
-        self.Count:Show()
-    else
-        self.Count:Hide()
-    end
-    self.count = item.count
-
-        -- Durability
-
-    if ( item.canEquip and item.canEquip > 0 ) then
-        local currentDurability, maxDurability = GetContainerItemDurability(item.bagID, item.slotID)
-
-        if ( maxDurability and maxDurability > 0 and currentDurability < maxDurability ) then
-            local percent = currentDurability / maxDurability
-            local color = ItemColorGradient(percent)
-            self.TopString:SetText(FormatPercentage(percent, true))
-            self.TopString:SetTextColor(color:GetRGB())
-        else
-            self.TopString:SetText("")
-        end
-    else
-        self.TopString:SetText("")
-    end
-
-        -- Item Level
-
-    if ( item.canEquip and item.canEquip > 0 ) then
-        local qualityColor = ITEM_QUALITY_COLORS[item.quality].color
-        self.BottomString:SetText(item.level)
-        self.BottomString:SetTextColor(qualityColor:GetRGB())
-    else
-        self.BottomString:SetText("")
-    end
-
-        -- Pawn Item Upgrade Arrow
-
-    if ( self.upgradeArrow ) then
-        if ( item.canEquip and item.canEquip > 0 and item.minLevel <= UnitLevel("player") and item.level > 0 ) then
-            local isUpgrade = IsContainerItemAnUpgrade(item.bagID, item.slotID)
-            if ( isUpgrade ) then
-                self.upgradeArrow:ClearAllPoints()
-                self.upgradeArrow:SetSize(17, 17)
-                self.upgradeArrow:SetPoint("BOTTOMLEFT", self.Icon)
-                self.upgradeArrow:Show()
-            else
-                self.upgradeArrow:Hide()
-            end
-        else
-            self.upgradeArrow:Hide()
-        end
-    end
-
-    self:UpdateCooldown(item)
-    self:UpdateLock(item)
-    self:UpdateQuest(item)
+    self:UpdateIcon(item.texture)
+    self:UpdateItemCount(item.count)
+    self:UpdateItemLevel(item.inventoryType, item.quality, item.level)
+    self:UpdateNewItemTexture(item.quality)
+    self:UpdateUpgradeArrow(item.inventoryType)
+    self:UpdateQuest(item.quality)
+    self:UpdateDurability()
+    self:UpdateLock()
+    self:UpdateCooldown()
 
     if ( self.OnUpdate ) then self:OnUpdate(item) end
 end
 
+local function ItemButton_UpdateIcon(self, texture)
+    if ( not self ) then
+        return
+    end
+
+    local icon = self.Icon
+
+    if ( texture ) then
+        icon:SetTexture(texture)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    else
+        if ( cBneavCfg.CompressEmpty and self.bgTex ) then
+            icon:SetTexture(self.bgTex)
+            icon:SetTexCoord(0, 1, 0, 1)
+        else
+            icon:SetColorTexture(1, 1, 1, 0.1)
+            icon:SetTexCoord(0, 1, 0, 1)
+        end
+    end
+end
+
+local function ItemButton_UpdateNewItemTexture(button, quality)
+    if ( not self ) then
+        return
+    end
+
+    local newItemTexture = self.NewItemTexture
+
+    if ( not newItemTexture ) then
+        return
+    end
+
+    local isNewItem = C_NewItems.IsNewItem(self.bagID, self.slotID)
+    local flashAnim = self.flashAnim
+    local newItemAnim = self.newItemAnim
+
+        if ( isNewItem ) then
+        local isBattlePayItem = IsBattlePayItem(self.bagID, self.slotID)
+
+            if ( isBattlePayItem ) then
+            newItemTexture:Hide()
+            else
+            if ( quality and NEW_ITEM_ATLAS_BY_QUALITY[quality] ) then
+                newItemTexture:SetAtlas(NEW_ITEM_ATLAS_BY_QUALITY[quality])
+                else
+                newItemTexture:SetAtlas("bags-glow-white")
+                end
+            newItemTexture:Show()
+            end
+
+        if ( not flashAnim:IsPlaying() and not newItemAnim:IsPlaying() ) then
+            flashAnim:Play()
+            newItemAnim:Play()
+            end
+        else
+        newItemTexture:Hide()
+
+        if ( flashAnim:IsPlaying() or newItemAnim:IsPlaying() ) then
+            flashAnim:Stop()
+            newItemAnim:Stop()
+        end
+            end
+end
+
+local function ItemButton_UpdateItemCount(self, count)
+    if ( not self ) then
+        return
+        end
+
+    if ( not count ) then
+        count = 0
+    end
+
+    local countString = self.Count
+    self.count = count
+
+    if ( count > 1 ) then
+
+        if ( count >= 1e5 ) then
+            count = "*"
+        elseif ( count >= 1e3 ) then
+            count = AbbreviateNumbers(count)
+        end
+
+        countString:SetText(count)
+        countString:Show()
+    else
+        countString:Hide()
+        end
+end
+
+local function ItemButton_UpdateDurability(self)
+    if ( not self ) then
+        return
+    end
+
+    local topString = self.TopString
+    local current, total = GetContainerItemDurability(self.bagID, self.slotID)
+
+    if ( not current or not total ) then
+        topString:Hide()
+        return
+    end
+
+    if ( total and total > 0 and current < total ) then
+        local percent = current / total
+            local color = ItemColorGradient(percent)
+        topString:SetText(FormatPercentage(percent, true))
+        topString:SetTextColor(color:GetRGB())
+        else
+        topString:Hide()
+    end
+end
+
+local function ItemButton_UpdateItemLevel(self, inventoryType, quality, level)
+    if ( not self ) then
+        return
+        end
+
+    if ( inventoryType and inventoryType > 0 ) then
+        local r, g, b = GetItemQualityColor(quality)
+        self.BottomString:SetText(level)
+        self.BottomString:SetTextColor(r, g, b)
+        self.BottomString:Show()
+    else
+        self.BottomString:Hide()
+    end
+end
+
+local function ItemButton_UpdateUpgradeArrow(self, inventoryType)
+    if ( not self ) then
+        return
+    end
+
+    local upgradeArrow = self.upgradeArrow
+
+    if ( upgradeArrow ) then
+        if ( inventoryType and inventoryType > 0 ) then
+            local isUpgrade = IsContainerItemAnUpgrade(self.bagID, self.slotID)
+            if ( isUpgrade ) then
+                upgradeArrow:Show()
+            else
+                upgradeArrow:Hide()
+            end
+        else
+            upgradeArrow:Hide()
+        end
+    end
+end
+
 --[[!
     Updates the buttons cooldown with new item-information
-    @param item <table> The itemTable holding information, see Implementation:GetItemInfo()
-    @callback OnUpdateCooldown(item)
+    @param bagID, slotID
 ]]
-local function ItemButton_UpdateCooldown(self, item)
-    local start, duration, enable = GetContainerItemCooldown(item.bagID, item.slotID)
-    CooldownFrame_Set(self.Cooldown, start, duration, enable)
+local function ItemButton_UpdateCooldown(self)
+    if ( not self ) then
+        return
+    end
 
-    if ( self.OnUpdateCooldown ) then self:OnUpdateCooldown(item) end
+    local start, duration, enable = GetContainerItemCooldown(self.bagID, self.slotID)
+    CooldownFrame_Set(self.Cooldown, start, duration, enable)
 end
 
 --[[!
     Updates the buttons lock with new item-information
-    @param item <table> The itemTable holding information, see Implementation:GetItemInfo()
-    @callback OnUpdateLock(item)
+    @param bagID, slotID
 ]]
-local function ItemButton_UpdateLock(self, item)
-    local _, _, locked = GetContainerItemInfo(item.bagID, item.slotID)
-    self.Icon:SetDesaturated(locked)
+local function ItemButton_UpdateLock(self)
+    if ( not self ) then
+        return
+    end
 
-    if ( self.OnUpdateLock ) then self:OnUpdateLock(item) end
+    local _, _, locked = GetContainerItemInfo(self.bagID, self.slotID)
+    self.Icon:SetDesaturated(locked)
+end
+
+local function ItemButton_UpdateQuality(self, quality)
+    if ( not self ) then
+        return
+    end
+
+	if ( quality ) then
+        if ( quality > LE_ITEM_QUALITY_COMMON ) then
+            local r, g, b = GetItemQualityColor(quality)
+			self.Border:SetVertexColor(r, g, b)
+		else
+			self.Border:SetVertexColor(0.40, 0.40, 0.40)
+		end
+	else
+		self.Border:SetVertexColor(0.40, 0.40, 0.40)
+	end
 end
 
 --[[!
     Updates the buttons quest texture with new item information
-    @param item <table> The itemTable holding information, see Implementation:GetItemInfo()
-    @callback OnUpdateQuest(item)
+    @param bagID, slotID
 ]]
-local function ItemButton_UpdateQuest(self, item)
+
+local function ItemButton_UpdateQuest(self, quality)
+    if ( not self ) then
+        return
+    end
+
     local questBang
+    local isQuestItem, questID, isActive = GetContainerItemQuestInfo(self.bagID, self.slotID)
 
-    if ( item.questID and not item.questActive ) then
-        self.Border:SetVertexColor(1, 1, 0.35)
-        questBang = true
-    elseif ( item.questID or item.isQuestItem ) then
-        self.Border:SetVertexColor(1, 1, 0.35)
-        questBang = false
-    elseif ( item.quality and item.quality > 1 ) then
-        local qualityColor = ITEM_QUALITY_COLORS[item.quality].color
-        self.Border:SetVertexColor(qualityColor:GetRGB())
+    local border = self.Border
+    local quest = self.Quest
+
+    if ( quest ) then
+    if ( questID and not isActive ) then
+            border:SetVertexColor(1, 1, 0.35)
+            quest:Show()
+    elseif ( questID or isQuestItem ) then
+            border:SetVertexColor(1, 1, 0.35)
+            quest:Hide()
     else
-        self.Border:SetVertexColor(0.40, 0.40, 0.40)
+            self:UpdateQuality(quality)
+            quest:Hide()
     end
-
-    if ( self.Quest ) then
-        if ( questBang ) then
-            self.Quest:SetTexture(mediaPath.."QuestBang")
-            self.Border:SetVertexColor(1, 1, 0.35)
-            self.Quest:Show()
         else
-            self.Quest:Hide()
-        end
+        self:UpdateQuality(quality)
     end
-
-    if ( self.OnUpdateQuest ) then self:OnUpdateQuest(item) end
 end
 
 cargBags:RegisterScaffold("Default", function(self)
-    self.glowTex = [[Interface\Buttons\UI-ActionButton-Border]] --! @property glowTex <string> The textures used for the glow
-    self.glowAlpha = 0.8 --! @property glowAlpha <number> The alpha of the glow texture
-    self.glowBlend = "ADD" --! @property glowBlend <string> The blendMode of the glow texture
-    self.glowCoords = { 14/64, 50/64, 14/64, 50/64 } --! @property glowCoords <table> Indexed table of texCoords for the glow texture
-    self.bgTex = nil --! @property bgTex <string> Texture used as a background if no item is in the slot
+    self.bgTex = nil
 
-    self.CreateFrame = ItemButton_CreateFrame
     self.Scaffold = ItemButton_Scaffold
 
     self.Update = ItemButton_Update
     self.UpdateCooldown = ItemButton_UpdateCooldown
     self.UpdateLock = ItemButton_UpdateLock
     self.UpdateQuest = ItemButton_UpdateQuest
+    self.UpdateIcon = ItemButton_UpdateIcon
+    self.UpdateItemCount = ItemButton_UpdateItemCount
+    self.UpdateItemLevel = ItemButton_UpdateItemLevel
+    self.UpdateQuality = ItemButton_UpdateQuality
+    self.UpdateDurability = ItemButton_UpdateDurability
+    self.UpdateNewItemTexture = ItemButton_UpdateNewItemTexture
+    self.UpdateUpgradeArrow = ItemButton_UpdateUpgradeArrow
 
     self.OnEnter = ItemButton_OnEnter
     self.OnLeave = ItemButton_OnLeave

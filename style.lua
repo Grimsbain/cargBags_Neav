@@ -151,6 +151,7 @@ local function RestackItems(self)
     elseif ( self.isBag ) then
         SortBags()
     end
+    PlaySound(SOUNDKIT.UI_BAG_SORTING_01)
 end
 
 --[[!
@@ -177,20 +178,13 @@ local function ResetNewItems(self)
                 local item = cbNeav:GetItemInfo(bagID, slotID)
 
                 if ( item.id ) then
-                    if ( cB_KnownItems[item.id] ) then
-                        cB_KnownItems[item.id] = cB_KnownItems[item.id] + (item.stackCount and item.stackCount or 0)
-                    else
-                        cB_KnownItems[item.id] = item.stackCount and item.stackCount or 0
-                    end
+                    cB_KnownItems[item.id] = GetItemCount(item.id)
                 end
             end
         end
     end
     cbNeav:UpdateBags()
-end
-
-function cbNeavResetNew()
-    ResetNewItems()
+    PlaySound(SOUNDKIT.UI_BAG_SORTING_01)
 end
 
 --[[!

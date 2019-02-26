@@ -9,7 +9,7 @@ ns.options = {
         standard = { [[Fonts\ARIALN.ttf]], 12, "OUTLINE" },
 
         --Font to use for the dropdown menu
-        dropdown = { [[Fonts\ARIALN.ttf]], 12, nil },
+        dropdown = { [[Fonts\ARIALN.ttf]], 13, nil },
 
         -- Font to use for durability and item level
         itemInfo = { [[Fonts\ARIALN.ttf]], 9, "OUTLINE" },

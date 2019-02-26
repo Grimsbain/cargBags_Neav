@@ -158,7 +158,8 @@ end
 function Container:FilterForFunction(func, filters)
     filters = filters or self.filters
 
-    for i, button in pairs(self.buttons) do
+    for i = 1, #self.buttons do
+        local button = self.buttons[i]
         local result = filters:Check(button:GetItemInfo())
         func(button, result)
     end

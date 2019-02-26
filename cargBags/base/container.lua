@@ -89,7 +89,9 @@ end
     @callback OnButtonRemove(button)
 ]]
 function Container:RemoveButton(button)
-    for i, single in ipairs(self.buttons) do
+    for i = 1, #self.buttons do
+        local single = self.buttons[i]
+
         if ( button == single ) then
             self:ScheduleContentCallback()
             button.container = nil
@@ -136,8 +138,10 @@ end
     @param func <function>
     @param ... Arguments which are passed to the function
 ]]
+
 function Container:ApplyToButtons(func, ...)
-    for i, button in pairs(self.buttons) do
+    for i = 1, #self.buttons do
+        local button = self.buttons[i]
         func(button, ...)
     end
 end

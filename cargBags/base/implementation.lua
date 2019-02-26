@@ -73,7 +73,7 @@ end
 ]]
 function Implementation:OnShow()
     if ( self.notInited ) then
-        if ( not InCombatLockdown() ) then -- initialization of bags in combat taints the itembuttons within - Lars Norberg
+        if ( not InCombatLockdown() ) then
             self:Init()
         else
             return
@@ -271,7 +271,7 @@ function Implementation:Init()
     self:RegisterEvent("PLAYERBANKSLOTS_CHANGED", self, self.PLAYERBANKSLOTS_CHANGED)
     self:RegisterEvent("PLAYERREAGENTBANKSLOTS_CHANGED", self, self.PLAYERREAGENTBANKSLOTS_CHANGED)
     self:RegisterEvent("UNIT_QUEST_LOG_CHANGED", self, self.UNIT_QUEST_LOG_CHANGED)
-    self:RegisterEvent("BAG_CLOSED", self, self.BAG_CLOSED)
+    self:RegisterEvent("QUEST_ACCEPTED", self, self.QUEST_ACCEPTED)
     self:RegisterEvent("INVENTORY_SEARCH_UPDATE", self, self.INVENTORY_SEARCH_UPDATE)
 end
 
@@ -303,15 +303,27 @@ function Implementation:SetButton(bagID, slotID, button)
     self.buttons[toBagSlot(bagID, slotID)] = button
 end
 
-local defaultItem = cargBags:NewItemTable()
-
 --[[!
-    Fetches the itemInfo of the item in bagID/slotID into the table
-    @param bagID <number>
-    @param slotID <number>
-    @param i <table> [optional]
-    @return i <table>
+Fetches the itemInfo of the item in bagID/slotID into the table.
+Uses a fake itemLocation table to avoid memory issues with Blizzards
+itemLocation mixin.
+@param bagID <number>
+@param slotID <number>
+@param item <table> [optional]
+@return item <table>
 ]]
+
+local itemLocation = {
+        bagID = nil,
+        slotIndex = nil,
+}
+
+local function SetItemLocation(bagID, slotID)
+    itemLocation.bagID = bagID
+    itemLocation.slotIndex = slotID
+end
+
+local defaultItem = cargBags:NewItemTable()
 
 function Implementation:GetItemInfo(bagID, slotID, item)
     item = item or defaultItem
@@ -323,18 +335,21 @@ function Implementation:GetItemInfo(bagID, slotID, item)
     item.bagID = bagID
     item.slotID = slotID
 
-    local clink = GetContainerItemLink(bagID, slotID)
+    local link = GetContainerItemLink(bagID, slotID)
 
-    if ( not clink ) then
+    if ( not link ) then
         return item
     end
 
-    item.texture, item.count, _, item.quality, _, _, item.link, _, _, item.id = GetContainerItemInfo(bagID, slotID)
-    _, _, _, _, item.minLevel, item.type, item.subType, item.stackCount, _, _, item.sellPrice, item.classID, item.subclassID = GetItemInfo(item.link)
-    item.isQuestItem, item.questID, item.questActive = GetContainerItemQuestInfo(bagID, slotID)
-    item.isInSet, item.setName = GetContainerItemEquipmentSetInfo(bagID, slotID)
-    item.canEquip = C_Item.GetItemInventoryTypeByID(item.link)
-    item.level = GetDetailedItemLevelInfo(item.link)
+    SetItemLocation(bagID, slotID)
+
+    local _;
+    item.link = link
+    item.id = GetContainerItemID(bagID, slotID)
+    item.level = C_Item.GetCurrentItemLevel(itemLocation)
+    item.inventoryType = C_Item.GetItemInventoryType(itemLocation)
+    item.texture, item.count, _, item.quality = GetContainerItemInfo(bagID, slotID)
+    _, _, _, _, _, _, _, _, _, _, item.sellPrice, item.classID, item.subclassID = GetItemInfo(item.id)
 
     return item
 end
@@ -396,18 +411,16 @@ function Implementation:BAG_UPDATE(event, bagID, slotID)
     elseif ( bagID ) then
         self:UpdateBag(bagID)
     else
+        if ( self:AtBank() ) then
         for bagID = -1, 11 do
             self:UpdateBag(bagID)
         end
+        else
+            for bagID = 0, NUM_BAG_FRAMES do
+                self:UpdateBag(bagID)
+            end
+        end
     end
-end
-
---[[!
-    Updates a bag of the implementation (fired when it is removed)
-    @param bagID <number>
-]]
-function Implementation:BAG_CLOSED(event, bagID)
-    self:BAG_UPDATE(event, bagID)
 end
 
 --[[!
@@ -419,15 +432,13 @@ function Implementation:BAG_UPDATE_COOLDOWN(event, bagID)
         for slotID=1, GetContainerNumSlots(bagID) do
             local button = self:GetButton(bagID, slotID)
             if ( button ) then
-                local item = self:GetItemInfo(bagID, slotID)
-                button:UpdateCooldown(item)
+                button:UpdateCooldown(bagID, slotID)
             end
         end
     else
         for id, container in pairs(self.contByID) do
             for i, button in pairs(container.buttons) do
-                local item = self:GetItemInfo(button.bagID, button.slotID)
-                button:UpdateCooldown(item)
+                button:UpdateCooldown(button.bagID, button.slotID)
             end
         end
     end
@@ -443,25 +454,22 @@ function Implementation:ITEM_LOCK_CHANGED(event, bagID, slotID)
 
     local button = self:GetButton(bagID, slotID)
     if ( button ) then
-        local item = self:GetItemInfo(bagID, slotID)
-        button:UpdateLock(item)
+        button:UpdateLock(bagID, slotID)
     end
 end
 
 --[[!
     Fired when bank bags or slots need to be updated
-    @param bagID <number>
-    @param slotID <number> [optional]
+    @param slotID <number>
 ]]
-function Implementation:PLAYERBANKSLOTS_CHANGED(event, bagID, slotID)
-    if ( bagID <= NUM_BANKGENERIC_SLOTS ) then
-        slotID = bagID
-        bagID = -1
-    else
-        bagID = bagID - NUM_BANKGENERIC_SLOTS
+function Implementation:PLAYERBANKSLOTS_CHANGED(event, slotID)
+    local bagID = BANK_CONTAINER
+
+    if ( slotID > NUM_BANKGENERIC_SLOTS ) then
+        bagID = slotID - NUM_BANKGENERIC_SLOTS
     end
 
-    self:BAG_UPDATE(event, bagID, slotID)
+    self:BAG_UPDATE(event, bagID)
 end
 
 --[[!
@@ -470,21 +478,29 @@ end
     @param slotID <number> [optional]
 ]]
 function Implementation:PLAYERREAGENTBANKSLOTS_CHANGED(event, slotID)
-    local bagID = REAGENTBANK_CONTAINER
-
-    self:BAG_UPDATE(event, bagID, slotID)
+    self:BAG_UPDATE(event, REAGENTBANK_CONTAINER, slotID)
 end
 
 --[[
     Fired when the quest log of a unit changes
 ]]
-function Implementation:UNIT_QUEST_LOG_CHANGED(event)
+function Implementation:UNIT_QUEST_LOG_CHANGED(event, unit)
+    if ( self:IsShown() or unit ~= "player" ) then
+        return
+    end
+
     for id, container in pairs(self.contByID) do
         for i, button in pairs(container.buttons) do
-            local item = self:GetItemInfo(button.bagID, button.slotID)
-            button:UpdateQuest(item)
+            button:UpdateQuest(button.bagID, button.slotID)
         end
     end
+end
+
+--[[
+    Fired when the player accepts a quest.
+]]
+function Implementation:QUEST_ACCEPTED(event)
+    self:UNIT_QUEST_LOG_CHANGED(event, "player")
 end
 
 --[[

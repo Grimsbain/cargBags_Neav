@@ -30,40 +30,45 @@ local ItemKeys = cargBags.itemKeys
 
 local setItems
 
-local function initUpdater()
-    local function updateSets()
+local function UpdateSets()
         setItems = setItems or {}
-        for k in pairs(setItems) do setItems[k] = nil end
+    for key in pairs(setItems) do
+        setItems[key] = nil
+    end
 
         local setIDs = C_EquipmentSet.GetEquipmentSetIDs()
 
-        for _, setID in pairs(setIDs) do
+    for i=1, #setIDs do
+        local setID = setIDs[i]
             local items = C_EquipmentSet.GetItemIDs(setID)
 
             for slot, id in pairs(items) do
                 setItems[id] = setID
             end
         end
-    end
+end
 
+local function InitUpdater()
     local updater = CreateFrame("Frame")
     updater:RegisterEvent("EQUIPMENT_SETS_CHANGED")
     updater:RegisterEvent("PLAYER_ALIVE")
     updater:SetScript("OnEvent", function()
-        updateSets()
+        UpdateSets()
         cargBags:FireEvent("BAG_UPDATE")
     end)
 
-    updateSets()
+    UpdateSets()
 end
 
-ItemKeys["setID"] = function(i)
-    if(not setItems) then initUpdater() end
-    return setItems[i.id]
+ItemKeys["setID"] = function(item)
+    if ( not setItems ) then
+        InitUpdater()
+    end
+
+    return setItems[item.id]
 end
 
-ItemKeys["set"] = function(i)
-    local setID = i.setID
-    return setID and C_EquipmentSet.GetEquipmentSetInfo(setID)
+ItemKeys["set"] = function(item)
+    return item.setID and C_EquipmentSet.GetEquipmentSetInfo(item.setID)
 end
 

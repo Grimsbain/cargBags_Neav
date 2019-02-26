@@ -30,17 +30,22 @@ function layouts.grid(self, columns, spacing, xOffset, yOffset)
     columns, spacing = columns or 8, spacing or 5
     xOffset, yOffset = xOffset or 0, yOffset or 0
 
-
     local width, height = 0, 0
     local col, row = 0, 0
-    for i, button in ipairs(self.buttons) do
 
-        if(i == 1) then -- Hackish, I know
+    for i = 1, #self.buttons do
+        local button = self.buttons[i]
+
+        if ( i == 1 ) then -- Hackish, I know
             width, height = button:GetSize()
         end
 
         col = i % columns
-        if(col == 0) then col = columns end
+
+        if ( col == 0 ) then
+            col = columns
+        end
+
         row = math.ceil(i/columns)
 
         local xPos = (col-1) * (width + spacing)
@@ -65,7 +70,8 @@ function layouts.circle(self, radius, xOffset, yOffset)
 
     local a = 360/#self.buttons
 
-    for i, button in ipairs(self.buttons) do
+    for i = 1, #self.buttons[i] do
+        local button = self.buttons[i]
         local x = radius*cos(a*i)
         local y = -radius*sin(a*i)
 

@@ -93,17 +93,7 @@ function ItemButton:Create(template, parent)
         button:OnCreate(template)
     end
 
-    local normalTexture = _G[button:GetName().."NormalTexture"]
-    local newItemTexture = button.NewItemTexture
     local battlepayItemTexture = button.BattlepayItemTexture
-
-    if ( normalTexture ) then
-        normalTexture:SetTexture(nil)
-    end
-
-    if ( newItemTexture ) then
-        newItemTexture:SetTexture(nil)
-    end
 
     if ( battlepayItemTexture ) then
         battlepayItemTexture:SetTexture(nil)
