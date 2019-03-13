@@ -62,7 +62,7 @@ function BagButton:Create(bagID)
     buttonNum = buttonNum+1
     local name = addon.."BagButton"..buttonNum
 
-    local button = setmetatable(CreateFrame("CheckButton", name, nil, "ItemButtonTemplate"), self.__index)
+    local button = setmetatable(CreateFrame("ItemButton", name, nil), self.__index)
 
     local invID = ContainerIDToInventoryID(bagID)
     button.invID = invID
@@ -84,7 +84,7 @@ function BagButton:Create(bagID)
 
     button:RegisterForDrag("LeftButton", "RightButton")
     button:RegisterForClicks("anyUp")
-    button:SetCheckedTexture(self.checkedTex, "ADD")
+    -- button:SetCheckedTexture(self.checkedTex, "ADD")
 
     button:SetSize(32, 32)
 
@@ -132,7 +132,7 @@ function BagButton:Update()
         end
     end
 
-    self:SetChecked(not self.hidden and not self.notBought)
+    -- self:SetChecked(not self.hidden and not self.notBought)
 
     if ( self.OnUpdate ) then self:OnUpdate() end
 end
@@ -154,7 +154,7 @@ function BagButton:OnEnter()
         end
     end
 
-    self:UpdateTooltip()
+    -- self:UpdateTooltip()
 end
 
 function BagButton:OnLeave()

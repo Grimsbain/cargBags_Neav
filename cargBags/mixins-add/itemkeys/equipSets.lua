@@ -31,21 +31,21 @@ local ItemKeys = cargBags.itemKeys
 local setItems
 
 local function UpdateSets()
-        setItems = setItems or {}
+    setItems = setItems or {}
     for key in pairs(setItems) do
         setItems[key] = nil
     end
 
-        local setIDs = C_EquipmentSet.GetEquipmentSetIDs()
+    local setIDs = C_EquipmentSet.GetEquipmentSetIDs()
 
     for i=1, #setIDs do
         local setID = setIDs[i]
-            local items = C_EquipmentSet.GetItemIDs(setID)
+        local items = C_EquipmentSet.GetItemIDs(setID)
 
-            for slot, id in pairs(items) do
-                setItems[id] = setID
-            end
+        for slot, id in pairs(items) do
+            setItems[id] = setID
         end
+    end
 end
 
 local function InitUpdater()

@@ -94,7 +94,7 @@ cB_Filters.fItemClass = function(item, container)
 
         if ( class and class ~= "NoClass" and isFiltered ) then
             bag = class
-    else
+        else
             bag = "Bag"
         end
     end
@@ -150,8 +150,8 @@ function cbNeav:ClassifyItem(item)
             return true
         elseif ( item.classID == 15 and item.subclassID == 2 ) then
             cB_ItemClass[item.id] = "BattlePet"
-        return true
-    end
+            return true
+        end
     end
 
     cB_ItemClass[item.id] = "NoClass"

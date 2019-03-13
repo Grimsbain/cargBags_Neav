@@ -412,9 +412,9 @@ function Implementation:BAG_UPDATE(event, bagID, slotID)
         self:UpdateBag(bagID)
     else
         if ( self:AtBank() ) then
-        for bagID = -1, 11 do
-            self:UpdateBag(bagID)
-        end
+            for bagID = -1, 11 do
+                self:UpdateBag(bagID)
+            end
         else
             for bagID = 0, NUM_BAG_FRAMES do
                 self:UpdateBag(bagID)

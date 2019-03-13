@@ -558,7 +558,7 @@ function MyContainer:OnCreate(name, settings)
     if ( self.isBag or self.isBank or self.isReagentBank ) then
         local dropSize = itemSlotSize - 1
 
-        self.DropTarget = CreateFrame("Button", self.name.."DropTarget", self, "ItemButtonTemplate")
+        self.DropTarget = CreateFrame("ItemButton", self.name.."DropTarget", self)
         self.DropTarget:SetSize(dropSize, dropSize)
 
         local normalTexture = _G[self.DropTarget:GetName().."NormalTexture"]
@@ -776,5 +776,5 @@ end
 local BagButton = cbNeav:GetClass("BagButton", true, "BagButton")
 
 function BagButton:OnCreate()
-    self:GetCheckedTexture():SetVertexColor(1, 0.8, 0, 0.8)
+    -- self:GetCheckedTexture():SetVertexColor(1, 0.8, 0, 0.8)
 end

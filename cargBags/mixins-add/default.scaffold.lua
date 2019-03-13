@@ -181,38 +181,38 @@ local function ItemButton_UpdateNewItemTexture(button, quality)
     local flashAnim = self.flashAnim
     local newItemAnim = self.newItemAnim
 
-        if ( isNewItem ) then
+    if ( isNewItem ) then
         local isBattlePayItem = IsBattlePayItem(self.bagID, self.slotID)
 
-            if ( isBattlePayItem ) then
+        if ( isBattlePayItem ) then
             newItemTexture:Hide()
-            else
+        else
             if ( quality and NEW_ITEM_ATLAS_BY_QUALITY[quality] ) then
                 newItemTexture:SetAtlas(NEW_ITEM_ATLAS_BY_QUALITY[quality])
-                else
+            else
                 newItemTexture:SetAtlas("bags-glow-white")
-                end
-            newItemTexture:Show()
             end
+            newItemTexture:Show()
+        end
 
         if ( not flashAnim:IsPlaying() and not newItemAnim:IsPlaying() ) then
             flashAnim:Play()
             newItemAnim:Play()
-            end
-        else
+        end
+    else
         newItemTexture:Hide()
 
         if ( flashAnim:IsPlaying() or newItemAnim:IsPlaying() ) then
             flashAnim:Stop()
             newItemAnim:Stop()
         end
-            end
+    end
 end
 
 local function ItemButton_UpdateItemCount(self, count)
     if ( not self ) then
         return
-        end
+    end
 
     if ( not count ) then
         count = 0
@@ -233,7 +233,7 @@ local function ItemButton_UpdateItemCount(self, count)
         countString:Show()
     else
         countString:Hide()
-        end
+    end
 end
 
 local function ItemButton_UpdateDurability(self)
@@ -251,10 +251,10 @@ local function ItemButton_UpdateDurability(self)
 
     if ( total and total > 0 and current < total ) then
         local percent = current / total
-            local color = ItemColorGradient(percent)
+        local color = ItemColorGradient(percent)
         topString:SetText(FormatPercentage(percent, true))
         topString:SetTextColor(color:GetRGB())
-        else
+    else
         topString:Hide()
     end
 end
@@ -262,7 +262,7 @@ end
 local function ItemButton_UpdateItemLevel(self, inventoryType, quality, level)
     if ( not self ) then
         return
-        end
+    end
 
     if ( inventoryType and inventoryType > 0 ) then
         local r, g, b = GetItemQualityColor(quality)
@@ -355,17 +355,17 @@ local function ItemButton_UpdateQuest(self, quality)
     local quest = self.Quest
 
     if ( quest ) then
-    if ( questID and not isActive ) then
+        if ( questID and not isActive ) then
             border:SetVertexColor(1, 1, 0.35)
             quest:Show()
-    elseif ( questID or isQuestItem ) then
+        elseif ( questID or isQuestItem ) then
             border:SetVertexColor(1, 1, 0.35)
             quest:Hide()
-    else
+        else
             self:UpdateQuality(quality)
             quest:Hide()
-    end
-        else
+        end
+    else
         self:UpdateQuality(quality)
     end
 end

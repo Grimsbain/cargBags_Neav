@@ -82,7 +82,7 @@ function ItemButton:Create(template, parent)
     impl.numSlots = (impl.numSlots or 0) + 1
     local name = ("%sSlot%d"):format(impl.name, impl.numSlots)
 
-    local button = setmetatable(CreateFrame("Button", name, parent, template), self.__index)
+    local button = setmetatable(CreateFrame("ItemButton", name, parent, template), self.__index)
     button:SetSize(ns.options.itemSlotSize, ns.options.itemSlotSize)
 
     if ( button.Scaffold ) then
